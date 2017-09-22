@@ -1,0 +1,5 @@
+sudo: required
+language: crystal
+crystal:
+  - latest
+services: redis-server

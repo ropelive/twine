@@ -1,0 +1,10 @@
+version: 1.0
+shards:
+  redis:
+    github: stefanwille/crystal-redis
+    version: 1.9.0
+
+  yeager:
+    github: gokmen/yeager
+    version: 0.1.3
+
