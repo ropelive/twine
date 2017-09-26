@@ -9,19 +9,42 @@ module Twine
   end
 
   class App < Yeager::App
-    PORT    = 4000
-    HOST    = "0.0.0.0"
-    WELCOME = "Welcome to Twine!"
+    PORT = 4000
+    HOST = "0.0.0.0"
 
+    WELCOME       = "Welcome to Twine!"
     SERVER_PREFIX = "rope-server-"
+    KEY_PREFIX    = "twine-"
 
-    property url : String = "#{HOST}:#{PORT}"
-    private property redis : Redis
+    private struct KeyGetter
+      property prefix
 
-    def initialize
-      super
+      def initialize(@prefix : String = App::KEY_PREFIX)
+      end
+
+      def server(id)
+        "#{@prefix}#{SERVER_PREFIX}#{id}"
+      end
+
+      def any
+        "#{@prefix}*"
+      end
+    end
+
+    property url : String
+    getter get_key : KeyGetter
+
+    private getter redis : Redis
+    private getter server : HTTP::Server
+
+    def initialize(@host = HOST, @port = PORT, @prefix = KEY_PREFIX)
+      super()
 
       @redis = (Twine::Connection.new).redis
+
+      @url = "#{@host}:#{@port}"
+      @server = HTTP::Server.new(@host, @port, [@handler])
+      @get_key = KeyGetter.new @prefix
 
       get "/" do |req, res|
         res.send WELCOME
@@ -61,16 +84,16 @@ module Twine
 
     private def get_data(req)
       return nil, JSON.parse_raw(req.body.as(IO).gets_to_end)
-    rescue
+    rescue err
       return Error::DATA, nil
     end
 
     def get_servers(id)
       id = "*" if id.nil?
-      cursor, keys = redis.scan(0, "#{SERVER_PREFIX}#{id}")
+      cursor, keys = redis.scan(0, get_key.server(id))
       if keys.is_a?(Array) && cursor != "0"
         until cursor == "0"
-          cursor, next_keys = redis.scan(cursor, "#{SERVER_PREFIX}#{id}")
+          cursor, next_keys = redis.scan(cursor, get_key.server(id))
           keys = keys + next_keys if next_keys.is_a?(Array)
         end
       end
@@ -83,7 +106,7 @@ module Twine
 
     def create_server
       id = SecureRandom.uuid
-      redis.hset("#{SERVER_PREFIX}#{id}", nil, nil)
+      redis.hset(get_key.server(id), nil, nil)
       return nil, id
     rescue Redis::Error
       return Error::DATABASE, nil
@@ -92,7 +115,7 @@ module Twine
     end
 
     def delete_server(id)
-      redis.del("#{SERVER_PREFIX}#{id}")
+      redis.del(get_key.server(id))
       return nil
     rescue Redis::Error
       return Error::DATABASE
@@ -100,10 +123,47 @@ module Twine
       return Error::MISSING
     end
 
+    def get_all
+      cursor, keys = redis.scan(0, get_key.any)
+      if keys.is_a?(Array) && cursor != "0"
+        until cursor == "0"
+          cursor, next_keys = redis.scan(cursor, get_key.any)
+          keys = keys + next_keys if next_keys.is_a?(Array)
+        end
+      end
+      return nil, JSON.parse_raw(keys.to_s)
+    rescue Redis::Error
+      return Error::DATABASE, nil
+    rescue
+      return Error::INTERNAL, nil
+    end
+
+    def delete_all
+      err, all_keys = get_all
+      return err unless err.nil?
+      if all_keys.is_a?(Array)
+        redis.multi do |multi|
+          all_keys.each do |key|
+            multi.del key
+          end
+        end
+      end
+      return nil
+    rescue Redis::Error
+      return Error::DATABASE, nil
+    rescue
+      return Error::INTERNAL, nil
+    end
+
     def listen(block = true)
+      @server = HTTP::Server.new(@host, @port, [@handler])
+      {% if !flag?(:without_openssl) %}
+      @server.tls = nil
+      {% end %}
+
       spawn do
         begin
-          listen PORT, HOST
+          @server.listen
         rescue e
           puts "Failed to start server!", e
           exit
@@ -113,9 +173,13 @@ module Twine
       Fiber.yield
 
       if block
-        puts "Twine started on #{HOST}:#{PORT}!"
+        puts "Twine started on #{@host}:#{@port}!"
         sleep
       end
+    end
+
+    def close
+      @server.close
     end
   end
 end
