@@ -6,6 +6,7 @@ module Twine
     INTERNAL = "Internal server error."
     DATA     = "Malformed data received."
     MISSING  = "Missing required data."
+    NOTFOUND = "No such data."
   end
 
   class App < Yeager::App
@@ -75,6 +76,23 @@ module Twine
         next fail res, err unless err.nil?
 
         res.json({"kite_id" => id})
+      end
+
+      patch "/servers/:id" do |req, res|
+        key = req.params["id"]
+        err, servers = get_servers key
+        next fail res, err unless err.nil?
+
+        servers = servers.as(Array)
+        next fail res, Error::NOTFOUND if servers.size == 0
+
+        err, data = get_data req
+        next fail res, err unless err.nil?
+
+        err = set_data get_key.server(key), data
+        next fail res, err unless err.nil?
+
+        success res
       end
     end
 
@@ -162,6 +180,20 @@ module Twine
       return Error::DATABASE, nil
     rescue
       return Error::INTERNAL, nil
+    end
+
+    def set_data(s_key, data)
+      data = data.as(Hash)
+      redis.multi do |multi|
+        data.each do |key, value|
+          multi.hset s_key, key, value
+        end
+      end
+      return nil
+    rescue Redis::Error
+      return Error::DATABASE
+    rescue
+      return Error::INTERNAL
     end
 
     def delete_multi(keys)
