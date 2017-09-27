@@ -1,5 +1,9 @@
 require "./twine/*"
 
-con = Twine::Connection.new
-app = Twine::App.new
-app.listen
+begin
+  Twine::Connection.new
+rescue e
+  abort("Couldn't start Twine server: #{e.message}")
+end
+
+(Twine::App.new).listen
