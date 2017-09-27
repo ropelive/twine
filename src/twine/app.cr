@@ -90,44 +90,43 @@ module Twine
 
     def get_servers(id)
       id = "*" if id.nil?
-      cursor, keys = redis.scan(0, get_key.server(id))
-      if keys.is_a?(Array) && cursor != "0"
-        until cursor == "0"
-          cursor, next_keys = redis.scan(cursor, get_key.server(id))
-          keys = keys + next_keys if next_keys.is_a?(Array)
-        end
-      end
-      return nil, JSON.parse_raw(keys.to_s)
-    rescue Redis::Error
-      return Error::DATABASE, nil
-    rescue
-      return Error::INTERNAL, nil
+      fetch get_key.server(id)
+    end
+
+    def delete_server(id)
+      delete_multi [get_key.server(id)]
     end
 
     def create_server
       id = SecureRandom.uuid
-      redis.hset(get_key.server(id), nil, nil)
-      return nil, id
+      err, added = add get_key.server(id)
+      return err, added ? id : nil
+    end
+
+    def get_all
+      fetch get_key.any
+    end
+
+    def delete_all
+      err, all_keys = get_all
+      return err unless err.nil?
+      delete_multi all_keys if all_keys.is_a?(Array)
+    end
+
+    def add(key, prop = nil, value = nil)
+      redis.hset(key, prop, value)
+      return nil, true
     rescue Redis::Error
       return Error::DATABASE, nil
     rescue
       return Error::MISSING, nil
     end
 
-    def delete_server(id)
-      redis.del(get_key.server(id))
-      return nil
-    rescue Redis::Error
-      return Error::DATABASE
-    rescue
-      return Error::MISSING
-    end
-
-    def get_all
-      cursor, keys = redis.scan(0, get_key.any)
+    def fetch(key)
+      cursor, keys = redis.scan(0, key)
       if keys.is_a?(Array) && cursor != "0"
         until cursor == "0"
-          cursor, next_keys = redis.scan(cursor, get_key.any)
+          cursor, next_keys = redis.scan(cursor, key)
           keys = keys + next_keys if next_keys.is_a?(Array)
         end
       end
@@ -138,21 +137,17 @@ module Twine
       return Error::INTERNAL, nil
     end
 
-    def delete_all
-      err, all_keys = get_all
-      return err unless err.nil?
-      if all_keys.is_a?(Array)
-        redis.multi do |multi|
-          all_keys.each do |key|
-            multi.del key
-          end
+    def delete_multi(keys)
+      redis.multi do |multi|
+        keys.each do |key|
+          multi.del key
         end
       end
       return nil
     rescue Redis::Error
-      return Error::DATABASE, nil
+      return Error::DATABASE
     rescue
-      return Error::INTERNAL, nil
+      return Error::INTERNAL
     end
 
     def listen(block = true)
