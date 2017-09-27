@@ -47,7 +47,7 @@ module Twine
         response = HTTP::Client.post \
           "#{app.url}/servers",
             body: "broken data"
-        response.status_code.should eq(500)
+        response.status_code.should eq(400)
 
         result = JSON.parse_raw(response.body).as(Hash)
         result.has_key?("kite_id").should be_false
@@ -62,7 +62,7 @@ module Twine
         response = HTTP::Client.post \
           "#{app.url}/servers",
             body: %({"server": "foo"})
-        response.status_code.should eq(200)
+        response.status_code.should eq(201)
 
         result = JSON.parse_raw(response.body).as(Hash)
         result.has_key?("kite_id").should be_true
@@ -87,7 +87,7 @@ module Twine
         response = HTTP::Client.post \
           "#{app.url}/servers",
             body: %({"server": "foo"})
-        response.status_code.should eq(200)
+        response.status_code.should eq(201)
 
         result = JSON.parse_raw(response.body).as(Hash)
         result.has_key?("kite_id").should be_true
@@ -105,7 +105,7 @@ module Twine
         app.close
       end
 
-      it "GET should return given server data if exists" do
+      it "GET should return given server data with status code 200" do
         app.listen block: false
 
         response = HTTP::Client.get "#{app.url}/servers/#{kite_id}"
@@ -118,14 +118,11 @@ module Twine
         app.close
       end
 
-      it "GET should return empty list if not found" do
+      it "GET should return 404 if given server not found" do
         app.listen block: false
 
         response = HTTP::Client.get "#{app.url}/servers/foobarbaz"
-        response.status_code.should eq(200)
-
-        result = JSON.parse_raw(response.body).as(Array)
-        result.size.should eq(0)
+        response.status_code.should eq(404)
 
         app.close
       end
@@ -142,10 +139,7 @@ module Twine
         result["ok"].should be_true
 
         response = HTTP::Client.get "#{app.url}/servers/#{kite_id}"
-        response.status_code.should eq(200)
-
-        result = JSON.parse_raw(response.body).as(Array)
-        result.size.should eq(0)
+        response.status_code.should eq(404)
 
         app.close
       end
@@ -155,11 +149,9 @@ module Twine
       it "PATCH should update data for the given server if exists" do
         app.listen block: false
 
+        # try to patch a non-existent kite
         response = HTTP::Client.patch "#{app.url}/servers/#{kite_id}"
-        response.status_code.should eq(500)
-
-        result = JSON.parse_raw(response.body).as(Hash)
-        result["error"].should eq(Twine::Error::NOTFOUND)
+        response.status_code.should eq(404)
 
         response = HTTP::Client.patch \
           "#{app.url}/servers/#{new_kite_id}",

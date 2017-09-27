@@ -55,8 +55,12 @@ module Twine
         err, servers, data = get_servers req.params["id"]
         next fail res, err unless err.nil?
 
-        if req.params["id"]? && servers.as(Array).size == 1
-          res.json data
+        if req.params["id"]?
+          if servers.as(Array).size == 1
+            res.json data
+          else
+            fail res, Error::NOTFOUND, 404
+          end
         else
           res.json servers
         end
@@ -75,7 +79,7 @@ module Twine
         err, id = create_server
         next fail res, err unless err.nil?
 
-        res.json({"kite_id" => id})
+        res.status(201).json({"kite_id" => id})
       end
 
       patch "/servers/:id" do |req, res|
@@ -84,7 +88,7 @@ module Twine
         next fail res, err unless err.nil?
 
         servers = servers.as(Array)
-        next fail res, Error::NOTFOUND if servers.size == 0
+        next fail res, Error::NOTFOUND, 404 if servers.size == 0
 
         err, data = get_data req
         next fail res, err unless err.nil?
@@ -96,8 +100,8 @@ module Twine
       end
     end
 
-    private def fail(res, err)
-      res.status(500).json({"error" => err})
+    private def fail(res, err, code = 400)
+      res.status(code).json({"error" => err})
     end
 
     private def success(res)
