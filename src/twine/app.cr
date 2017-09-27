@@ -51,10 +51,14 @@ module Twine
       end
 
       get "/servers/:id?" do |req, res|
-        err, data = get_servers req.params["id"]
+        err, servers, data = get_servers req.params["id"]
         next fail res, err unless err.nil?
 
-        res.json data
+        if req.params["id"]? && servers.as(Array).size == 1
+          res.json data
+        else
+          res.json servers
+        end
       end
 
       delete "/servers/:id" do |req, res|
@@ -90,7 +94,16 @@ module Twine
 
     def get_servers(id)
       id = "*" if id.nil?
-      fetch get_key.server(id)
+
+      err, servers = fetch key = get_key.server(id)
+      return err, nil, nil unless err.nil?
+
+      if id != "*" && servers.as(Array).size == 1
+        err, data = fetch_data key
+        return err, servers, data
+      end
+
+      return nil, servers, nil
     end
 
     def delete_server(id)
@@ -99,7 +112,7 @@ module Twine
 
     def create_server
       id = SecureRandom.uuid
-      err, added = add get_key.server(id)
+      err, added = add get_key.server(id), "version", "1.0"
       return err, added ? id : nil
     end
 
@@ -131,6 +144,20 @@ module Twine
         end
       end
       return nil, JSON.parse_raw(keys.to_s)
+    rescue Redis::Error
+      return Error::DATABASE, nil
+    rescue
+      return Error::INTERNAL, nil
+    end
+
+    def fetch_data(key)
+      data = redis.hgetall key
+      hash = {} of String => String
+      data = data.as(Array)
+      while data.size > 0
+        hash[data.shift.to_s] = data.shift.to_s
+      end
+      return nil, JSON.parse_raw(hash.to_json)
     rescue Redis::Error
       return Error::DATABASE, nil
     rescue
