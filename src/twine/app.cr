@@ -176,7 +176,7 @@ module Twine
       return Error::DATA, nil
     end
 
-    # -- Server helpers -- END
+    # -- Server helpers -- BEGIN
 
     def get_servers(id)
       id = "*" if id.nil?
