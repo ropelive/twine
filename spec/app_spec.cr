@@ -104,15 +104,15 @@ module Twine
         app.close
       end
 
-      it "GET should return given server id if exists" do
+      it "GET should return given server data if exists" do
         app.listen block: false
 
         response = HTTP::Client.get "#{app.url}/servers/#{kite_id}"
         response.status_code.should eq(200)
 
-        result = JSON.parse_raw(response.body).as(Array)
-        result.size.should eq(1)
-        result[0].should eq(app.get_key.server(kite_id))
+        result = JSON.parse_raw(response.body).as(Hash)
+        result.has_key?("version").should be_true
+        result["version"].should eq("1.0")
 
         app.close
       end
