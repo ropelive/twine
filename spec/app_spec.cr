@@ -38,6 +38,7 @@ module Twine
     end
 
     kite_id = nil
+    new_kite_id = nil
 
     describe "POST /servers" do
       it "POST should handle malformed data" do
@@ -145,6 +146,34 @@ module Twine
 
         result = JSON.parse_raw(response.body).as(Array)
         result.size.should eq(0)
+
+        app.close
+      end
+    end
+
+    describe "PATCH /servers/:id" do
+      it "PATCH should update data for the given server if exists" do
+        app.listen block: false
+
+        response = HTTP::Client.patch "#{app.url}/servers/#{kite_id}"
+        response.status_code.should eq(500)
+
+        result = JSON.parse_raw(response.body).as(Hash)
+        result["error"].should eq(Twine::Error::NOTFOUND)
+
+        response = HTTP::Client.patch \
+          "#{app.url}/servers/#{new_kite_id}",
+            body: %({"version": "2.0"})
+        response.status_code.should eq(200)
+
+        result = JSON.parse_raw(response.body).as(Hash)
+        result["ok"].should be_true
+
+        response = HTTP::Client.get "#{app.url}/servers/#{new_kite_id}"
+        response.status_code.should eq(200)
+
+        result = JSON.parse_raw(response.body).as(Hash)
+        result["version"].should eq("2.0")
 
         app.close
       end
