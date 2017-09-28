@@ -15,6 +15,7 @@ module Twine
 
     WELCOME       = "Welcome to Twine!"
     SERVER_PREFIX = "rope-server-"
+    NODE_PREFIX   = "rope-node-"
     KEY_PREFIX    = "twine-"
 
     private struct KeyGetter
@@ -25,6 +26,10 @@ module Twine
 
       def server(id)
         "#{@prefix}#{SERVER_PREFIX}#{id}"
+      end
+
+      def node(id)
+        "#{@prefix}#{NODE_PREFIX}#{id}"
       end
 
       def any
@@ -50,6 +55,8 @@ module Twine
       get "/" do |req, res|
         res.send WELCOME
       end
+
+      # -- Server handlers -- BEGIN
 
       get "/servers/:id?" do |req, res|
         err, servers, data = get_servers req.params["id"]
@@ -98,6 +105,61 @@ module Twine
 
         success res
       end
+
+      # -- Server handlers -- END
+
+      # -- Node(client) handlers -- BEGIN
+
+      get "/nodes/:id?" do |req, res|
+        err, nodes, data = get_nodes req.params["id"]
+        next fail res, err unless err.nil?
+
+        if req.params["id"]?
+          if nodes.as(Array).size == 1
+            res.json data
+          else
+            fail res, Error::NOTFOUND, 404
+          end
+        else
+          res.json nodes
+        end
+      end
+
+      delete "/nodes/:id" do |req, res|
+        err = delete_node req.params["id"]
+        next fail res, err unless err.nil?
+        success res
+      end
+
+      post "/nodes" do |req, res|
+        err, data = get_data req
+        next fail res, err unless err.nil?
+
+        err, id = create_node
+        next fail res, err unless err.nil?
+
+        res.status(201).json({"kite_id" => id})
+      end
+
+      patch "/nodes/:id" do |req, res|
+        key = req.params["id"]
+        err, nodes = get_nodes key
+        next fail res, err unless err.nil?
+
+        nodes = nodes.as(Array)
+        next fail res, Error::NOTFOUND, 404 if nodes.size == 0
+
+        err, data = get_data req
+        next fail res, err unless err.nil?
+
+        err = set_data get_key.node(key), data
+        next fail res, err unless err.nil?
+
+        success res
+      end
+
+      # -- Node(client) handlers -- END
+
     end
 
     private def fail(res, err, code = 400)
@@ -113,6 +175,8 @@ module Twine
     rescue err
       return Error::DATA, nil
     end
+
+    # -- Server helpers -- BEGIN
 
     def get_servers(id)
       id = "*" if id.nil?
@@ -137,6 +201,36 @@ module Twine
       err, added = add get_key.server(id), "version", "1.0"
       return err, added ? id : nil
     end
+
+    # -- Server helpers -- END
+
+    # -- Node(client) helpers -- BEGIN
+
+    def get_nodes(id)
+      id = "*" if id.nil?
+
+      err, nodes = fetch key = get_key.node(id)
+      return err, nil, nil unless err.nil?
+
+      if id != "*" && nodes.as(Array).size == 1
+        err, data = fetch_data key
+        return err, nodes, data
+      end
+
+      return nil, nodes, nil
+    end
+
+    def delete_node(id)
+      delete_multi [get_key.node(id)]
+    end
+
+    def create_node
+      id = SecureRandom.uuid
+      err, added = add get_key.node(id), "version", "1.0"
+      return err, added ? id : nil
+    end
+
+    # -- Node(client) helpers -- END
 
     def get_all
       fetch get_key.any
