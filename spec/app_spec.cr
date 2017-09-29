@@ -84,6 +84,24 @@ module Twine
 
             app.close
           end
+
+          it "POST should fail with wrong token" do
+            app.listen block: false
+
+            response = HTTP::Client.post \
+              "#{app.url}/{{ name.id }}s",
+                body: %({"{{ name.id }}": "foo"}),
+                headers: HTTP::Headers{"Bearer" => "so secret"}
+
+            response.status_code.should eq(401)
+
+            result = JSON.parse_raw(response.body).as(Hash)
+            result.has_key?("kite_id").should be_false
+            result["error"].should eq(Twine::Error::UNAUTHORIZED)
+
+            app.close
+          end
+
         end
 
         describe "GET /{{ name.id }}s/:id?" do
@@ -155,6 +173,22 @@ module Twine
 
             app.close
           end
+
+          it "GET should fail with wrong token" do
+            app.listen block: false
+
+            response = HTTP::Client.get \
+              "#{app.url}/{{ name.id }}s",
+              headers: HTTP::Headers{"Bearer" => "so secret"}
+
+            response.status_code.should eq(401)
+
+            result = JSON.parse_raw(response.body).as(Hash)
+            result["error"].should eq(Twine::Error::UNAUTHORIZED)
+
+            app.close
+          end
+
         end
 
         describe "DELETE /{{ name.id }}s/:id" do
@@ -178,6 +212,22 @@ module Twine
 
             app.close
           end
+
+          it "DELETE should fail with wrong token" do
+            app.listen block: false
+
+            response = HTTP::Client.delete \
+              "#{app.url}/{{ name.id }}s/#{kite_id}",
+              headers: HTTP::Headers{"Bearer" => "so secret"}
+
+            response.status_code.should eq(401)
+
+            result = JSON.parse_raw(response.body).as(Hash)
+            result["error"].should eq(Twine::Error::UNAUTHORIZED)
+
+            app.close
+          end
+
         end
 
         describe "PATCH /{{ name.id }}s/:id" do
@@ -193,8 +243,8 @@ module Twine
 
             response = HTTP::Client.patch \
               "#{app.url}/{{ name.id }}s/#{new_kite_id}",
-                body: %({"version": "2.0"}),
-                headers: headers
+              body: %({"version": "2.0"}),
+              headers: headers
             response.status_code.should eq(200)
 
             result = JSON.parse_raw(response.body).as(Hash)
@@ -211,6 +261,23 @@ module Twine
 
             app.close
           end
+
+          it "PATCH should fail with wrong token" do
+            app.listen block: false
+
+            response = HTTP::Client.patch \
+              "#{app.url}/{{ name.id }}s/#{new_kite_id}",
+              body: %({"version": "2.0"}),
+              headers: HTTP::Headers{"Bearer" => "so secret"}
+
+            response.status_code.should eq(401)
+
+            result = JSON.parse_raw(response.body).as(Hash)
+            result["error"].should eq(Twine::Error::UNAUTHORIZED)
+
+            app.close
+          end
+
         end
       end
     {% end %}
