@@ -2,11 +2,12 @@ require "yeager"
 
 module Twine
   struct Error
-    DATABASE = "DB error occured, check back later."
-    INTERNAL = "Internal server error."
-    DATA     = "Malformed data received."
-    MISSING  = "Missing required data."
-    NOTFOUND = "No such data."
+    DATABASE     = "DB error occured, check back later."
+    INTERNAL     = "Internal server error."
+    DATA         = "Malformed data received."
+    MISSING      = "Missing required data."
+    NOTFOUND     = "No such data."
+    UNAUTHORIZED = "Authorization failure."
   end
 
   class App < Yeager::App
@@ -24,11 +25,11 @@ module Twine
       def initialize(@prefix : String = App::KEY_PREFIX)
       end
 
-      def server(id)
+      def server(id = "")
         "#{@prefix}#{SERVER_PREFIX}#{id}"
       end
 
-      def node(id)
+      def node(id = "")
         "#{@prefix}#{NODE_PREFIX}#{id}"
       end
 
@@ -37,13 +38,18 @@ module Twine
       end
     end
 
-    property url : String
+    getter url : String
     getter get_key : KeyGetter
 
     private getter redis : Redis
     private getter server : HTTP::Server
 
-    def initialize(@host = HOST, @port = PORT, @prefix = KEY_PREFIX)
+    private property secret : String
+
+    def initialize(@host = HOST,
+                   @port = PORT,
+                   @prefix = KEY_PREFIX,
+                   @secret = SecureRandom.uuid)
       super()
 
       @redis = (Twine::Connection.new).redis
@@ -54,6 +60,17 @@ module Twine
 
       get "/" do |req, res|
         res.send WELCOME
+      end
+
+      # -- Authorization check over Bearer token in Header
+
+      all "/*" do |req, res, continue|
+        bearer = req.headers["Bearer"]?
+        if !bearer.nil? && check_secret bearer
+          continue.call
+        else
+          fail res, Error::UNAUTHORIZED, 401
+        end
       end
 
       # -- Server handlers -- BEGIN
@@ -189,6 +206,8 @@ module Twine
         return err, servers, data
       end
 
+      servers.as(Array).map! &.as(String).lchop get_key.server
+
       return nil, servers, nil
     end
 
@@ -217,6 +236,8 @@ module Twine
         return err, nodes, data
       end
 
+      nodes.as(Array).map! &.as(String).lchop get_key.node
+
       return nil, nodes, nil
     end
 
@@ -231,6 +252,8 @@ module Twine
     end
 
     # -- Node(client) helpers -- END
+
+    # -- Redis helpers -- BEGIN
 
     def get_all
       fetch get_key.any
@@ -307,6 +330,14 @@ module Twine
       return Error::INTERNAL
     end
 
+    # -- Redis helpers -- END
+
+    # -- App helpers -- BEGIN
+
+    def check_secret(secret) : Bool
+      @secret == secret
+    end
+
     def listen(block = true)
       @server = HTTP::Server.new(@host, @port, [@handler])
       {% if !flag?(:without_openssl) %}
@@ -333,5 +364,8 @@ module Twine
     def close
       @server.close
     end
+
+    # -- App helpers -- END
+
   end
 end
