@@ -84,7 +84,7 @@ module Twine
 
             result = JSON.parse_raw(response.body).as(Array)
             result.size.should eq(1)
-            result[0].should eq(app.get_key.{{ name.id }}(kite_id))
+            result[0].should eq(kite_id)
 
             # create new server
             response = HTTP::Client.post \
@@ -102,8 +102,9 @@ module Twine
 
             result = JSON.parse_raw(response.body).as(Array)
             result.size.should eq(2)
-            result.includes?(app.get_key.{{ name.id }}(kite_id)).should be_true
-            result.includes?(app.get_key.{{ name.id }}(new_kite_id)).should be_true
+
+            result.includes?(kite_id).should be_true
+            result.includes?(new_kite_id).should be_true
 
             app.close
           end

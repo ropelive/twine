@@ -24,11 +24,11 @@ module Twine
       def initialize(@prefix : String = App::KEY_PREFIX)
       end
 
-      def server(id)
+      def server(id = "")
         "#{@prefix}#{SERVER_PREFIX}#{id}"
       end
 
-      def node(id)
+      def node(id = "")
         "#{@prefix}#{NODE_PREFIX}#{id}"
       end
 
@@ -37,7 +37,7 @@ module Twine
       end
     end
 
-    property url : String
+    getter url : String
     getter get_key : KeyGetter
 
     private getter redis : Redis
@@ -189,6 +189,8 @@ module Twine
         return err, servers, data
       end
 
+      servers.as(Array).map! &.as(String).lchop get_key.server
+
       return nil, servers, nil
     end
 
@@ -216,6 +218,8 @@ module Twine
         err, data = fetch_data key
         return err, nodes, data
       end
+
+      nodes.as(Array).map! &.as(String).lchop get_key.node
 
       return nil, nodes, nil
     end
