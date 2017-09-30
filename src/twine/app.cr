@@ -8,11 +8,14 @@ module Twine
     MISSING      = "Missing required data."
     NOTFOUND     = "No such data."
     UNAUTHORIZED = "Authorization failure."
+    NOTAVAILABLE = "No server available to connect."
   end
 
   class App < Yeager::App
     PORT = 4000
     HOST = "0.0.0.0"
+
+    SERVER_MAX = 100
 
     WELCOME       = "Welcome to Twine!"
     SERVER_PREFIX = "rope-server-"
@@ -60,6 +63,20 @@ module Twine
 
       get "/" do |req, res|
         res.send WELCOME
+      end
+
+      get "/connect" do |req, res|
+        err, result = get_servers "*"
+        if !err.nil? && (servers = result.as(Array)).size == 0
+          next fail res, Error::NOTAVAILABLE
+        end
+
+        unless servers.nil?
+          servers.shuffle!
+          servers.each do |server|
+            err, _, data = get_servers server
+          end
+        end
       end
 
       # -- Authorization check over Bearer token in Header
@@ -217,8 +234,11 @@ module Twine
 
     def create_server
       id = SecureRandom.uuid
-      err, added = add get_key.server(id), "version", "1.0"
-      return err, added ? id : nil
+      err = set_data get_key.server(id), {
+        "version"     => "1.0",
+        "connections" => 0,
+      }
+      return err, err.nil? ? id : nil
     end
 
     # -- Server helpers -- END
@@ -247,8 +267,10 @@ module Twine
 
     def create_node
       id = SecureRandom.uuid
-      err, added = add get_key.node(id), "version", "1.0"
-      return err, added ? id : nil
+      err = set_data get_key.node(id), {
+        "version" => "1.0",
+      }
+      return err, err.nil? ? id : nil
     end
 
     # -- Node(client) helpers -- END
@@ -263,15 +285,6 @@ module Twine
       err, all_keys = get_all
       return err unless err.nil?
       delete_multi all_keys if all_keys.is_a?(Array)
-    end
-
-    def add(key, prop = nil, value = nil)
-      redis.hset(key, prop, value)
-      return nil, true
-    rescue Redis::Error
-      return Error::DATABASE, nil
-    rescue
-      return Error::MISSING, nil
     end
 
     def fetch(key)
