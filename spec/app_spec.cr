@@ -46,6 +46,52 @@ module Twine
       end
     end
 
+    describe "GET /connect" do
+      it "should redirect requests to first available server" do
+        app.listen block: false
+
+        # Create four servers
+        servers = [] of String
+        4.times do
+          response = HTTP::Client.post(
+            "#{app.url}/servers",
+            body: %({"version": "1.0", "connections": 3}),
+            headers: headers
+          )
+          response.status_code.should eq(201)
+          result = JSON.parse_raw(response.body).as(Hash)
+          result.has_key?("kite_id").should be_true
+          servers << result["kite_id"].to_s
+        end
+
+        servers.size.should eq(4)
+        busy_servers = servers.sample(3)
+        busy_servers.each do |server|
+          response = HTTP::Client.patch(
+            "#{app.url}/servers/#{server}",
+            body: %({"connections": 5}),
+            headers: headers
+          )
+          response.status_code.should eq(200)
+          result = JSON.parse_raw(response.body).as(Hash)
+          result["ok"].should be_true
+        end
+
+        response = HTTP::Client.get(
+          "#{app.url}/connect",
+          headers: headers
+        )
+
+        response.status_code.should eq(200)
+
+        result = JSON.parse_raw(response.body).as(Array)
+        result.size.should eq(1)
+        servers.includes?(result[0]).should be_true
+        busy_servers.includes?(result[0]).should be_false
+
+        app.delete_all
+        app.close
+      end
     end
 
     {% for name in %w(server node) %}
