@@ -42,7 +42,7 @@ module Twine
     end
 
     getter url : String
-    getter get_key : KeyGetter
+    getter key_for : KeyGetter
 
     private getter redis : Redis
     private getter server : HTTP::Server
@@ -59,7 +59,7 @@ module Twine
 
       @url = "#{@host}:#{@port}"
       @server = HTTP::Server.new(@host, @port, [@handler])
-      @get_key = KeyGetter.new @prefix
+      @key_for = KeyGetter.new @prefix
 
       get "/" do |req, res|
         res.send WELCOME
@@ -117,7 +117,7 @@ module Twine
         err, data = get_data req
         next fail res, err unless err.nil?
 
-        err, id = create_server
+        err, id = create_server data
         next fail res, err unless err.nil?
 
         res.status(201).json({"kite_id" => id})
@@ -134,7 +134,7 @@ module Twine
         err, data = get_data req
         next fail res, err unless err.nil?
 
-        err = set_data get_key.server(key), data
+        err = set_data key_for.server(key), data
         next fail res, err unless err.nil?
 
         success res
@@ -186,7 +186,7 @@ module Twine
         err, data = get_data req
         next fail res, err unless err.nil?
 
-        err = set_data get_key.node(key), data
+        err = set_data key_for.node(key), data
         next fail res, err unless err.nil?
 
         success res
@@ -215,15 +215,15 @@ module Twine
     def get_servers(id)
       id = "*" if id.nil?
 
-      err, servers = fetch key = get_key.server(id)
+      err, servers = fetch key = key_for.server(id)
       return err, nil, nil unless err.nil?
+
+      servers.as(Array).map! &.as(String).lchop key_for.server
 
       if id != "*" && servers.as(Array).size == 1
         err, data = fetch_data key
         return err, servers, data
       end
-
-      servers.as(Array).map! &.as(String).lchop get_key.server
 
       return nil, servers, nil
     end
@@ -232,12 +232,15 @@ module Twine
       delete_multi [get_key.server(id)]
     end
 
-    def create_server
+    def create_server(data = nil)
       id = SecureRandom.uuid
-      err = set_data get_key.server(id), {
-        "version"     => "1.0",
-        "connections" => 0,
-      }
+
+      data = data.as(Hash)
+      data["version"] = "1.0" unless data["version"]?
+      data["connections"] = "0" unless data["connections"]?
+
+      err = set_data key_for.server(id), data
+      return err, nil unless err.nil?
       return err, err.nil? ? id : nil
     end
 
@@ -248,7 +251,7 @@ module Twine
     def get_nodes(id)
       id = "*" if id.nil?
 
-      err, nodes = fetch key = get_key.node(id)
+      err, nodes = fetch key = key_for.node(id)
       return err, nil, nil unless err.nil?
 
       if id != "*" && nodes.as(Array).size == 1
@@ -256,18 +259,18 @@ module Twine
         return err, nodes, data
       end
 
-      nodes.as(Array).map! &.as(String).lchop get_key.node
+      nodes.as(Array).map! &.as(String).lchop key_for.node
 
       return nil, nodes, nil
     end
 
     def delete_node(id)
-      delete_multi [get_key.node(id)]
+      delete_multi [key_for.node(id)]
     end
 
     def create_node
       id = SecureRandom.uuid
-      err = set_data get_key.node(id), {
+      err = set_data key_for.node(id), {
         "version" => "1.0",
       }
       return err, err.nil? ? id : nil
@@ -278,7 +281,7 @@ module Twine
     # -- Redis helpers -- BEGIN
 
     def get_all
-      fetch get_key.any
+      fetch key_for.any
     end
 
     def delete_all

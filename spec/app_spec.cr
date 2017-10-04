@@ -19,8 +19,8 @@ module Twine
     end
 
     it "should support prefixing" do
-      app.get_key.any.should eq("#{PREFIX}*")
-      app.get_key.server("foo")
+      app.key_for.any.should eq("#{PREFIX}*")
+      app.key_for.server("foo")
                  .should eq("#{PREFIX}#{Twine::App::SERVER_PREFIX}foo")
     end
 
@@ -35,13 +35,17 @@ module Twine
       end
     end
 
-    it "should cleanup test data" do
-      err = app.delete_all
-      err.should be_nil
+    describe "delete_all" do
+      it "should delete all related data from Redis" do
+        err = app.delete_all
+        err.should be_nil
 
-      err, keys = app.get_all
-      err.should be_nil
-      keys.as(Array).size.should eq(0)
+        err, keys = app.get_all
+        err.should be_nil
+        keys.as(Array).size.should eq(0)
+      end
+    end
+
     end
 
     {% for name in %w(server node) %}
@@ -73,7 +77,7 @@ module Twine
 
             response = HTTP::Client.post \
               "#{app.url}/{{ name.id }}s",
-                body: %({"{{ name.id }}": "foo"}),
+                body: %({"version": "1.0"}),
                 headers: headers
 
             response.status_code.should eq(201)
@@ -90,7 +94,7 @@ module Twine
 
             response = HTTP::Client.post \
               "#{app.url}/{{ name.id }}s",
-                body: %({"{{ name.id }}": "foo"}),
+                body: %({"version": "1.0"}),
                 headers: HTTP::Headers{"Bearer" => "so secret"}
 
             response.status_code.should eq(401)
@@ -121,7 +125,7 @@ module Twine
             # create new server
             response = HTTP::Client.post \
               "#{app.url}/{{ name.id }}s",
-                body: %({"{{ name.id }}": "foo"}),
+                body: %({"version": "1.0"}),
                 headers: headers
 
             response.status_code.should eq(201)
@@ -158,7 +162,9 @@ module Twine
             result = JSON.parse_raw(response.body).as(Hash)
             result.has_key?("version").should be_true
             result["version"].should eq("1.0")
-
+            {% if name.id == "server" %}
+            result["connections"].should eq("0")
+            {% end %}
             app.close
           end
 
@@ -243,7 +249,7 @@ module Twine
 
             response = HTTP::Client.patch \
               "#{app.url}/{{ name.id }}s/#{new_kite_id}",
-              body: %({"version": "2.0"}),
+              body: %({"version": "2.0", "connections": "2"}),
               headers: headers
             response.status_code.should eq(200)
 
@@ -258,6 +264,7 @@ module Twine
 
             result = JSON.parse_raw(response.body).as(Hash)
             result["version"].should eq("2.0")
+            result["connections"].should eq("2")
 
             app.close
           end
