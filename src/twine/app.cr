@@ -36,6 +36,10 @@ module Twine
         "#{@prefix}#{NODE_PREFIX}#{id}"
       end
 
+      def custom(name)
+        "#{@prefix}#{name}"
+      end
+
       def any
         "#{@prefix}*"
       end
@@ -66,17 +70,12 @@ module Twine
       end
 
       get "/connect" do |req, res|
-        err, result = get_servers "*"
-        if !err.nil? && (servers = result.as(Array)).size == 0
+        err, servers, data = get_available_server
+        if !err.nil? && servers.as(Array).size == 0
           next fail res, Error::NOTAVAILABLE
         end
 
-        unless servers.nil?
-          servers.shuffle!
-          servers.each do |server|
-            err, _, data = get_servers server
-          end
-        end
+        res.json servers # data to pass server data ~ GG
       end
 
       # -- Authorization check over Bearer token in Header
@@ -136,6 +135,11 @@ module Twine
 
         err = set_data key_for.server(key), data
         next fail res, err unless err.nil?
+
+        if data.as(Hash)["connections"]?
+          err = sort_servers
+          next fail res, err unless err.nil?
+        end
 
         success res
       end
@@ -229,7 +233,10 @@ module Twine
     end
 
     def delete_server(id)
-      delete_multi [get_key.server(id)]
+      err = delete_multi [key_for.server(id)]
+      return err unless err.nil?
+
+      sort_servers id
     end
 
     def create_server(data = nil)
@@ -241,7 +248,20 @@ module Twine
 
       err = set_data key_for.server(id), data
       return err, nil unless err.nil?
+
+      err = sort_servers id
       return err, err.nil? ? id : nil
+    end
+
+    def sort_servers(id = nil)
+      servers_list = key_for.custom("servers")
+      by = "#{key_for.server("*")}->connections"
+      sort_list servers_list, by, id
+    end
+
+    def get_available_server
+      servers_list = key_for.custom("servers")
+      get_servers redis.lrange(servers_list, 0, 0)[0]?
     end
 
     # -- Server helpers -- END
@@ -339,6 +359,16 @@ module Twine
           multi.del key
         end
       end
+      return nil
+    rescue Redis::Error
+      return Error::DATABASE
+    rescue
+      return Error::INTERNAL
+    end
+
+    def sort_list(list, by, id = nil)
+      redis.rpush(list, id) unless id.nil?
+      redis.sort(list, by: by, store: list)
       return nil
     rescue Redis::Error
       return Error::DATABASE
