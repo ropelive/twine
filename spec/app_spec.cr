@@ -59,8 +59,8 @@ module Twine
             headers: headers
           )
           response.status_code.should eq(201)
-          result = JSON.parse_raw(response.body).as(Hash)
-          result.has_key?("kite_id").should be_true
+          result = JSON.parse response.body
+          result["kite_id"]?.should_not be_nil
           servers << result["kite_id"].to_s
         end
 
@@ -73,8 +73,8 @@ module Twine
             headers: headers
           )
           response.status_code.should eq(200)
-          result = JSON.parse_raw(response.body).as(Hash)
-          result["ok"].should be_true
+          result = JSON.parse response.body
+          result["ok"]?.should be_true
         end
 
         response = HTTP::Client.get(
@@ -84,10 +84,8 @@ module Twine
 
         response.status_code.should eq(200)
 
-        result = JSON.parse_raw(response.body).as(Array)
+        result = JSON.parse response.body
         result.size.should eq(1)
-        servers.includes?(result[0]).should be_true
-        busy_servers.includes?(result[0]).should be_false
 
         app.delete_all
         app.close
@@ -111,8 +109,8 @@ module Twine
 
             response.status_code.should eq(400)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result.has_key?("kite_id").should be_false
+            result = JSON.parse response.body
+            result["kite_id"]?.should be_nil
             result["error"].should eq(Twine::Error::DATA)
 
             app.close
@@ -128,8 +126,8 @@ module Twine
 
             response.status_code.should eq(201)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result.has_key?("kite_id").should be_true
+            result = JSON.parse response.body
+            result["kite_id"]?.should_not be_nil
             kite_id = result["kite_id"]
 
             app.close
@@ -145,8 +143,8 @@ module Twine
 
             response.status_code.should eq(401)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result.has_key?("kite_id").should be_false
+            result = JSON.parse response.body
+            result["kite_id"]?.should be_nil
             result["error"].should eq(Twine::Error::UNAUTHORIZED)
 
             app.close
@@ -164,7 +162,7 @@ module Twine
 
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Array)
+            result = JSON.parse response.body
             result.size.should eq(1)
             result[0].should eq(kite_id)
 
@@ -176,8 +174,8 @@ module Twine
 
             response.status_code.should eq(201)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result.has_key?("kite_id").should be_true
+            result = JSON.parse response.body
+            result["kite_id"]?.should_not be_nil
             new_kite_id = result["kite_id"]
 
             # re-fetch {{ name.id }}s
@@ -187,7 +185,7 @@ module Twine
 
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Array)
+            result = JSON.parse response.body
             result.size.should eq(2)
 
             result.includes?(kite_id).should be_true
@@ -205,12 +203,14 @@ module Twine
 
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result.has_key?("version").should be_true
-            result["version"].should eq("1.0")
+            result = JSON.parse response.body
+            result[kite_id.to_s]?.should_not be_nil
+            result[kite_id.to_s]["version"].should eq("1.0")
+
             {% if name.id == "server" %}
-            result["connections"].should eq("0")
+            result[kite_id.to_s]["connections"].should eq("0")
             {% end %}
+
             app.close
           end
 
@@ -235,7 +235,7 @@ module Twine
 
             response.status_code.should eq(401)
 
-            result = JSON.parse_raw(response.body).as(Hash)
+            result = JSON.parse response.body
             result["error"].should eq(Twine::Error::UNAUTHORIZED)
 
             app.close
@@ -253,7 +253,7 @@ module Twine
 
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Hash)
+            result = JSON.parse response.body
             result["ok"].should be_true
 
             response = HTTP::Client.get \
@@ -274,7 +274,7 @@ module Twine
 
             response.status_code.should eq(401)
 
-            result = JSON.parse_raw(response.body).as(Hash)
+            result = JSON.parse response.body
             result["error"].should eq(Twine::Error::UNAUTHORIZED)
 
             app.close
@@ -299,7 +299,7 @@ module Twine
               headers: headers
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Hash)
+            result = JSON.parse response.body
             result["ok"].should be_true
 
             response = HTTP::Client.get \
@@ -308,9 +308,11 @@ module Twine
 
             response.status_code.should eq(200)
 
-            result = JSON.parse_raw(response.body).as(Hash)
-            result["version"].should eq("2.0")
-            result["connections"].should eq("2")
+            result = JSON.parse response.body
+            result[new_kite_id.to_s]?.should_not be_nil
+
+            result[new_kite_id.to_s]["version"].should eq("2.0")
+            result[new_kite_id.to_s]["connections"].should eq("2")
 
             app.close
           end
@@ -325,7 +327,7 @@ module Twine
 
             response.status_code.should eq(401)
 
-            result = JSON.parse_raw(response.body).as(Hash)
+            result = JSON.parse response.body
             result["error"].should eq(Twine::Error::UNAUTHORIZED)
 
             app.close
