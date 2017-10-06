@@ -75,7 +75,14 @@ module Twine
           next fail res, Error::NOTAVAILABLE
         end
 
-        res.json servers # data to pass server data ~ GG
+        server_id = servers.as(Array)[0]
+        data = data.as(Hash)[server_id].as(Hash)
+
+        if url = data["url"]?
+          res.redirect url.to_s
+        else
+          res.redirect "#{@url}/connect/#{server_id}"
+        end
       end
 
       # -- Authorization check over Bearer token in Header
@@ -226,7 +233,12 @@ module Twine
 
       if id != "*" && servers.as(Array).size == 1
         err, data = fetch_data key
-        return err, servers, data
+
+        server = {} of String => JSON::Type
+        data = data.as(Hash)
+        server[key.lchop key_for.server] = data
+
+        return err, servers, server
       end
 
       return nil, servers, nil
@@ -276,7 +288,12 @@ module Twine
 
       if id != "*" && nodes.as(Array).size == 1
         err, data = fetch_data key
-        return err, nodes, data
+
+        node = {} of String => JSON::Type
+        data = data.as(Hash)
+        node[key.lchop key_for.node] = data
+
+        return err, nodes, node
       end
 
       nodes.as(Array).map! &.as(String).lchop key_for.node
