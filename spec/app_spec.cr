@@ -67,6 +67,7 @@ module Twine
         servers.size.should eq(4)
         busy_servers = servers.sample(3)
         busy_servers.each do |server|
+          servers.delete server
           response = HTTP::Client.patch(
             "#{app.url}/servers/#{server}",
             body: %({"connections": 5}),
@@ -77,15 +78,36 @@ module Twine
           result["ok"]?.should be_true
         end
 
+        expected_server = servers[0]
+
         response = HTTP::Client.get(
           "#{app.url}/connect",
           headers: headers
         )
 
+        response.status_code.should eq(302)
+
+        new_location = response.headers["Location"]
+        new_location.should eq("#{app.url}/connect/#{expected_server}")
+
+        response = HTTP::Client.patch \
+          "#{app.url}/servers/#{expected_server}",
+            body: %({"url": "https://google.com"}),
+            headers: headers
         response.status_code.should eq(200)
 
         result = JSON.parse response.body
-        result.size.should eq(1)
+        result["ok"].should be_true
+
+        response = HTTP::Client.get(
+          "#{app.url}/connect",
+          headers: headers
+        )
+
+        response.status_code.should eq(302)
+
+        new_location = response.headers["Location"]
+        new_location.should eq("https://google.com")
 
         app.delete_all
         app.close

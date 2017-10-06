@@ -75,7 +75,14 @@ module Twine
           next fail res, Error::NOTAVAILABLE
         end
 
-        res.json data
+        server_id = servers.as(Array)[0]
+        data = data.as(Hash)[server_id].as(Hash)
+
+        if url = data["url"]?
+          res.redirect url.to_s
+        else
+          res.redirect "#{@url}/connect/#{server_id}"
+        end
       end
 
       # -- Authorization check over Bearer token in Header
