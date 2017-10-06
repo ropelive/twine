@@ -46,74 +46,6 @@ module Twine
       end
     end
 
-    describe "GET /connect" do
-      it "should redirect requests to first available server" do
-        app.listen block: false
-
-        # Create four servers
-        servers = [] of String
-        4.times do
-          response = HTTP::Client.post(
-            "#{app.url}/servers",
-            body: %({"version": "1.0", "connections": 3}),
-            headers: headers
-          )
-          response.status_code.should eq(201)
-          result = JSON.parse response.body
-          result["kite_id"]?.should_not be_nil
-          servers << result["kite_id"].to_s
-        end
-
-        servers.size.should eq(4)
-        busy_servers = servers.sample(3)
-        busy_servers.each do |server|
-          servers.delete server
-          response = HTTP::Client.patch(
-            "#{app.url}/servers/#{server}",
-            body: %({"connections": 5}),
-            headers: headers
-          )
-          response.status_code.should eq(200)
-          result = JSON.parse response.body
-          result["ok"]?.should be_true
-        end
-
-        expected_server = servers[0]
-
-        response = HTTP::Client.get(
-          "#{app.url}/connect",
-          headers: headers
-        )
-
-        response.status_code.should eq(302)
-
-        new_location = response.headers["Location"]
-        new_location.should eq("#{app.url}/connect/#{expected_server}")
-
-        response = HTTP::Client.patch \
-          "#{app.url}/servers/#{expected_server}",
-            body: %({"url": "https://google.com"}),
-            headers: headers
-        response.status_code.should eq(200)
-
-        result = JSON.parse response.body
-        result["ok"].should be_true
-
-        response = HTTP::Client.get(
-          "#{app.url}/connect",
-          headers: headers
-        )
-
-        response.status_code.should eq(302)
-
-        new_location = response.headers["Location"]
-        new_location.should eq("https://google.com")
-
-        app.delete_all
-        app.close
-      end
-    end
-
     {% for name in %w(server node) %}
 
       describe "{{ name.id }}s" do
@@ -358,6 +290,75 @@ module Twine
         end
       end
     {% end %}
+
+    describe "GET /connect" do
+      it "should redirect requests to first available server" do
+        app.delete_all
+        app.listen block: false
+
+        # Create four servers
+        servers = [] of String
+
+        4.times do
+          response = HTTP::Client.post(
+            "#{app.url}/servers",
+            body: %({"version": "1.0", "connections": 3}),
+            headers: headers
+          )
+          response.status_code.should eq(201)
+          result = JSON.parse response.body
+          result["kite_id"]?.should_not be_nil
+          servers << result["kite_id"].to_s
+        end
+
+        servers.size.should eq(4)
+        busy_servers = servers.sample(3)
+        busy_servers.each do |server|
+          servers.delete server
+          response = HTTP::Client.patch(
+            "#{app.url}/servers/#{server}",
+            body: %({"connections": 5}),
+            headers: headers
+          )
+          response.status_code.should eq(200)
+          result = JSON.parse response.body
+          result["ok"]?.should be_true
+        end
+
+        expected_server = servers[0]
+
+        response = HTTP::Client.get(
+          "#{app.url}/connect",
+          headers: headers
+        )
+
+        response.status_code.should eq(302)
+
+        new_location = response.headers["Location"]
+        new_location.should eq("#{app.url}/connect/#{expected_server}")
+
+        response = HTTP::Client.patch \
+          "#{app.url}/servers/#{expected_server}",
+            body: %({"url": "https://google.com"}),
+            headers: headers
+        response.status_code.should eq(200)
+
+        result = JSON.parse response.body
+        result["ok"].should be_true
+
+        response = HTTP::Client.get(
+          "#{app.url}/connect",
+          headers: headers
+        )
+
+        response.status_code.should eq(302)
+
+        new_location = response.headers["Location"]
+        new_location.should eq("https://google.com")
+
+        app.close
+      end
+    end
   end
 
   app.delete_all
