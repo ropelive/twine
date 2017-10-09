@@ -71,7 +71,7 @@ module Twine
 
       get "/connect" do |req, res|
         err, servers, data = get_available_server
-        if !err.nil? && servers.as(Array).size == 0
+        if !err.nil? || servers.as(Array).size == 0
           next fail res, Error::NOTAVAILABLE
         end
 

@@ -292,8 +292,20 @@ module Twine
     {% end %}
 
     describe "GET /connect" do
+      app.delete_all
+
+      it "should error when there is no server available " do
+        app.listen block: false
+
+        response = HTTP::Client.get(
+          "#{app.url}/connect",
+        )
+
+        response.status_code.should eq(400)
+        app.close
+      end
+
       it "should redirect requests to first available server" do
-        app.delete_all
         app.listen block: false
 
         # Create four servers
@@ -348,7 +360,6 @@ module Twine
 
         response = HTTP::Client.get(
           "#{app.url}/connect",
-          headers: headers
         )
 
         response.status_code.should eq(302)
