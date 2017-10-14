@@ -347,7 +347,7 @@ module Twine
         response.status_code.should eq(302)
 
         new_location = response.headers["Location"]
-        new_location.should eq("#{app.url}/connect/#{expected_server}")
+        new_location.should eq("//#{app.url}/connect/#{expected_server}")
 
         response = HTTP::Client.patch \
           "#{app.url}/servers/#{expected_server}",
