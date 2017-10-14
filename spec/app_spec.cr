@@ -5,7 +5,7 @@ module Twine
   SECRET = SecureRandom.uuid
 
   app = Twine::App.new prefix: PREFIX, secret: SECRET
-  headers = HTTP::Headers{"Bearer" => SECRET}
+  headers = HTTP::Headers{"Authorization" => "Bearer #{SECRET}"}
 
   describe App do
     it "should be able to start web server on default port" do
@@ -25,7 +25,7 @@ module Twine
     end
 
     it "should support custom secret" do
-      app.check_secret(SECRET).should be_true
+      app.check_secret("Bearer #{SECRET}").should be_true
     end
 
     describe "get_all" do
@@ -93,7 +93,7 @@ module Twine
             response = HTTP::Client.post \
               "#{app.url}/{{ name.id }}s",
                 body: %({"version": "1.0"}),
-                headers: HTTP::Headers{"Bearer" => "so secret"}
+                headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 
@@ -185,7 +185,7 @@ module Twine
 
             response = HTTP::Client.get \
               "#{app.url}/{{ name.id }}s",
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "so secret"}
 
             response.status_code.should eq(401)
 
@@ -224,7 +224,7 @@ module Twine
 
             response = HTTP::Client.delete \
               "#{app.url}/{{ name.id }}s/#{kite_id}",
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 
@@ -277,7 +277,7 @@ module Twine
             response = HTTP::Client.patch \
               "#{app.url}/{{ name.id }}s/#{new_kite_id}",
               body: %({"version": "2.0"}),
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 

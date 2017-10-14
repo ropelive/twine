@@ -88,8 +88,8 @@ module Twine
 
       # -- Authorization check over Bearer token in Header
 
-      all "/*" do |req, res, continue|
-        bearer = req.headers["Bearer"]?
+      all "*" do |req, res, continue|
+        bearer = req.headers["Authorization"]?
         if !bearer.nil? && check_secret bearer
           continue.call
         else
@@ -397,7 +397,7 @@ module Twine
     # -- App helpers -- BEGIN
 
     def check_secret(secret) : Bool
-      @secret == secret
+      secret == "Bearer #{@secret}"
     end
 
     def listen(block = true)
