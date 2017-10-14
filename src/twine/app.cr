@@ -77,7 +77,7 @@ module Twine
         end
 
         server_id = servers.as(Array)[0]
-        data = data.as(Hash)[server_id].as(Hash)
+        data = data.as(Hash)
 
         if url = data["url"]?
           res.redirect url.to_s
@@ -127,7 +127,7 @@ module Twine
         err, id = create_server data
         next fail res, err unless err.nil?
 
-        res.status(201).json({"kite_id" => id})
+        res.status(201).json({"id" => id})
       end
 
       patch "/servers/:id" do |req, res|
@@ -184,7 +184,7 @@ module Twine
         err, id = create_node
         next fail res, err unless err.nil?
 
-        res.status(201).json({"kite_id" => id})
+        res.status(201).json({"id" => id})
       end
 
       patch "/nodes/:id" do |req, res|
@@ -235,11 +235,10 @@ module Twine
       if id != "*" && servers.as(Array).size == 1
         err, data = fetch_data key
 
-        server = {} of String => JSON::Type
         data = data.as(Hash)
-        server[key.lchop key_for.server] = data
+        data["id"] = key.lchop key_for.server
 
-        return err, servers, server
+        return err, servers, data
       end
 
       return nil, servers, nil
@@ -290,11 +289,10 @@ module Twine
       if id != "*" && nodes.as(Array).size == 1
         err, data = fetch_data key
 
-        node = {} of String => JSON::Type
         data = data.as(Hash)
-        node[key.lchop key_for.node] = data
+        data["id"] = key.lchop key_for.node
 
-        return err, nodes, node
+        return err, nodes, data
       end
 
       nodes.as(Array).map! &.as(String).lchop key_for.node
