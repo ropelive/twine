@@ -56,6 +56,7 @@ module Twine
     def initialize(@host = HOST,
                    @port = PORT,
                    @prefix = KEY_PREFIX,
+                   @verbose = false,
                    @secret = SecureRandom.uuid)
       super()
 
@@ -402,7 +403,12 @@ module Twine
     end
 
     def listen(block = true)
-      @server = HTTP::Server.new(@host, @port, [@handler])
+      handlers = [] of Yeager::HTTPHandler | HTTP::LogHandler
+      handlers << HTTP::LogHandler.new if @verbose
+      handlers << @handler
+
+      @server = HTTP::Server.new(@host, @port, handlers)
+
       {% if !flag?(:without_openssl) %}
       @server.tls = nil
       {% end %}
