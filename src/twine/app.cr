@@ -66,6 +66,8 @@ module Twine
       @server = HTTP::Server.new(@host, @port, [@handler])
       @key_for = KeyGetter.new @prefix
 
+      enable_cors
+
       get "/" do |req, res|
         res.send WELCOME
       end
@@ -206,6 +208,21 @@ module Twine
 
       # -- Node(client) handlers -- END
 
+    end
+
+    private def enable_cors
+      use do |req, res, continue|
+        res.headers.add "Access-Control-Allow-Origin", "*"
+        continue.call
+      end
+
+      options "*" do |req, res|
+        res.headers.add "Access-Control-Allow-Methods", \
+          "GET, POST, DELETE, PATCH, OPTIONS"
+        res.headers.add "Access-Control-Allow-Headers", \
+          "Authorization, Origin, X-Requested-With, Content-Type, Accept"
+        res.flush
+      end
     end
 
     private def fail(res, err, code = 400)
