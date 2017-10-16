@@ -56,6 +56,7 @@ module Twine
     def initialize(@host = HOST,
                    @port = PORT,
                    @prefix = KEY_PREFIX,
+                   @verbose = false,
                    @secret = SecureRandom.uuid)
       super()
 
@@ -64,6 +65,8 @@ module Twine
       @url = "#{@host}:#{@port}"
       @server = HTTP::Server.new(@host, @port, [@handler])
       @key_for = KeyGetter.new @prefix
+
+      enable_cors
 
       get "/" do |req, res|
         res.send WELCOME
@@ -76,19 +79,19 @@ module Twine
         end
 
         server_id = servers.as(Array)[0]
-        data = data.as(Hash)[server_id].as(Hash)
+        data = data.as(Hash)
 
         if url = data["url"]?
           res.redirect url.to_s
         else
-          res.redirect "#{@url}/connect/#{server_id}"
+          res.redirect "//#{@url}/connect/#{server_id}"
         end
       end
 
       # -- Authorization check over Bearer token in Header
 
-      all "/*" do |req, res, continue|
-        bearer = req.headers["Bearer"]?
+      all "*" do |req, res, continue|
+        bearer = req.headers["Authorization"]?
         if !bearer.nil? && check_secret bearer
           continue.call
         else
@@ -126,7 +129,7 @@ module Twine
         err, id = create_server data
         next fail res, err unless err.nil?
 
-        res.status(201).json({"kite_id" => id})
+        res.status(201).json({"id" => id})
       end
 
       patch "/servers/:id" do |req, res|
@@ -183,7 +186,7 @@ module Twine
         err, id = create_node
         next fail res, err unless err.nil?
 
-        res.status(201).json({"kite_id" => id})
+        res.status(201).json({"id" => id})
       end
 
       patch "/nodes/:id" do |req, res|
@@ -205,6 +208,21 @@ module Twine
 
       # -- Node(client) handlers -- END
 
+    end
+
+    private def enable_cors
+      use do |req, res, continue|
+        res.headers.add "Access-Control-Allow-Origin", "*"
+        continue.call
+      end
+
+      options "*" do |req, res|
+        res.headers.add "Access-Control-Allow-Methods", \
+          "GET, POST, DELETE, PATCH, OPTIONS"
+        res.headers.add "Access-Control-Allow-Headers", \
+          "Authorization, Origin, X-Requested-With, Content-Type, Accept"
+        res.flush
+      end
     end
 
     private def fail(res, err, code = 400)
@@ -234,11 +252,10 @@ module Twine
       if id != "*" && servers.as(Array).size == 1
         err, data = fetch_data key
 
-        server = {} of String => JSON::Type
         data = data.as(Hash)
-        server[key.lchop key_for.server] = data
+        data["id"] = key.lchop key_for.server
 
-        return err, servers, server
+        return err, servers, data
       end
 
       return nil, servers, nil
@@ -289,11 +306,10 @@ module Twine
       if id != "*" && nodes.as(Array).size == 1
         err, data = fetch_data key
 
-        node = {} of String => JSON::Type
         data = data.as(Hash)
-        node[key.lchop key_for.node] = data
+        data["id"] = key.lchop key_for.node
 
-        return err, nodes, node
+        return err, nodes, data
       end
 
       nodes.as(Array).map! &.as(String).lchop key_for.node
@@ -398,11 +414,16 @@ module Twine
     # -- App helpers -- BEGIN
 
     def check_secret(secret) : Bool
-      @secret == secret
+      secret == "Bearer #{@secret}"
     end
 
     def listen(block = true)
-      @server = HTTP::Server.new(@host, @port, [@handler])
+      handlers = [] of Yeager::HTTPHandler | HTTP::LogHandler
+      handlers << HTTP::LogHandler.new if @verbose
+      handlers << @handler
+
+      @server = HTTP::Server.new(@host, @port, handlers)
+
       {% if !flag?(:without_openssl) %}
       @server.tls = nil
       {% end %}

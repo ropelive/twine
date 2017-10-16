@@ -1,0 +1,367 @@
+swagger: "2.0"
+
+info:
+  description: "Twine server REST Api definition"
+  version: "1.0.0"
+  title: "Twine"
+  contact:
+    email: "gokmen@goksel.me"
+  license:
+    name: "MIT"
+    url: "https://opensource.org/licenses/MIT"
+
+host: "0.0.0.0:4000"
+basePath: "/"
+
+tags:
+- name: "servers"
+  description: "Rope Servers"
+- name: "nodes"
+  description: "Rope nodes"
+
+schemes:
+- "http"
+- "https"
+
+securityDefinitions:
+  Bearer:
+    type: "apiKey"
+    name: "Authorization"
+    in: "header"
+
+paths:
+  /servers:
+    get:
+      tags:
+      - "servers"
+      summary: "Get list of available servers"
+      description: "Returns list of registered servers by their IDs"
+      operationId: "getServers"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+              format: "uuid"
+        401:
+          description: "Authorization failure"
+      security:
+      - Bearer: []
+    post:
+      tags:
+      - "servers"
+      summary: "Register a new server"
+      description: ""
+      operationId: "registerServer"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Server object to register Twine"
+        required: true
+        schema:
+          $ref: "#/definitions/Server"
+      responses:
+        201:
+          description: "Server created"
+          schema:
+            $ref: "#/definitions/Registered"
+        400:
+          description: "Malformed data"
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+      security:
+      - Bearer: []
+
+  /servers/{serverId}:
+    get:
+      tags:
+      - "servers"
+      summary: "Find server by ID"
+      description: "Returns a single server with details"
+      operationId: "getServer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "serverId"
+        in: "path"
+        description: "ID of server to return"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Server"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Server not found"
+      security:
+      - Bearer: []
+    delete:
+      tags:
+      - "servers"
+      summary: "Delete server by ID"
+      description: "Deletes a server with given ID"
+      operationId: "deleteServer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "serverId"
+        in: "path"
+        description: "ID of server to delete"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/OK"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+      security:
+      - Bearer: []
+    patch:
+      tags:
+      - "servers"
+      summary: "Patch server by ID"
+      description: "Updates a server with given ID and data"
+      operationId: "updateServer"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "serverId"
+        description: "ID of server to update"
+        required: true
+        type: "string"
+        format: "uuid"
+      - in: "body"
+        name: "body"
+        description: "Server details to update"
+        required: true
+        schema:
+          $ref: "#/definitions/Server"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/OK"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Server not found"
+      security:
+      - Bearer: []
+
+
+  /nodes:
+    get:
+      tags:
+      - "nodes"
+      summary: "Get list of registered nodes"
+      description: "Returns list of registered nodes by their IDs"
+      operationId: "getNodes"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+              format: "uuid"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+      security:
+      - Bearer: []
+    post:
+      tags:
+      - "nodes"
+      summary: "Register a new node"
+      description: ""
+      operationId: "registerNode"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        description: "Node object to register Twine"
+        required: true
+        schema:
+          $ref: "#/definitions/Node"
+      responses:
+        201:
+          description: "Node created"
+          schema:
+            $ref: "#/definitions/Registered"
+        400:
+          description: "Malformed data"
+          schema:
+            $ref: "#/definitions/Error"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+      security:
+      - Bearer: []
+
+  /nodes/{nodeId}:
+    get:
+      tags:
+      - "nodes"
+      summary: "Find node by ID"
+      description: "Returns a single node with details"
+      operationId: "getNode"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "nodeId"
+        in: "path"
+        description: "ID of node to return"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/Node"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Node not found"
+      security:
+      - Bearer: []
+    delete:
+      tags:
+      - "nodes"
+      summary: "Delete node by ID"
+      description: "Deletes a node with given ID"
+      operationId: "deleteNode"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "nodeId"
+        in: "path"
+        description: "ID of node to delete"
+        required: true
+        type: "string"
+        format: "uuid"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/OK"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+      security:
+      - Bearer: []
+    patch:
+      tags:
+      - "nodes"
+      summary: "Patch node by ID"
+      description: "Updates a node with given ID and data"
+      operationId: "updateNode"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "path"
+        name: "nodeId"
+        description: "ID of node to update"
+        required: true
+        type: "string"
+        format: "uuid"
+      - in: "body"
+        name: "body"
+        description: "Node details to update"
+        required: true
+        schema:
+          $ref: "#/definitions/Node"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            $ref: "#/definitions/OK"
+        401:
+          description: "Authorization failure"
+          schema:
+            $ref: "#/definitions/Error"
+        404:
+          description: "Node not found"
+      security:
+      - Bearer: []
+
+
+definitions:
+  OK:
+    type: "object"
+    properties:
+      ok:
+        type: "boolean"
+        default: true
+  Error:
+    type: "object"
+    properties:
+      error:
+        type: "string"
+  Registered:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        format: "uuid"
+  Server:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        format: "uuid"
+      url:
+        type: "string"
+        format: "url"
+      connections:
+        type: "integer"
+        format: "int32"
+      version:
+        type: "string"
+  Node:
+    type: "object"
+    properties:
+      id:
+        type: "string"
+        format: "uuid"
+      url:
+        type: "string"
+        format: "url"
+      version:
+        type: "string"

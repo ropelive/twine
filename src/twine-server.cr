@@ -11,4 +11,6 @@ if (secret = ENV["TWINE_SECRET"]?).nil?
   puts "Warning: No secret is set! Set one with $TWINE_SECRET"
 end
 
-(Twine::App.new(secret: secret)).listen
+verbose = !(ENV["TWINE_VERBOSE"]?.nil?)
+
+(Twine::App.new(secret: secret, verbose: verbose)).listen

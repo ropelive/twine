@@ -5,7 +5,7 @@ module Twine
   SECRET = SecureRandom.uuid
 
   app = Twine::App.new prefix: PREFIX, secret: SECRET
-  headers = HTTP::Headers{"Bearer" => SECRET}
+  headers = HTTP::Headers{"Authorization" => "Bearer #{SECRET}"}
 
   describe App do
     it "should be able to start web server on default port" do
@@ -25,7 +25,7 @@ module Twine
     end
 
     it "should support custom secret" do
-      app.check_secret(SECRET).should be_true
+      app.check_secret("Bearer #{SECRET}").should be_true
     end
 
     describe "get_all" do
@@ -64,7 +64,7 @@ module Twine
             response.status_code.should eq(400)
 
             result = JSON.parse response.body
-            result["kite_id"]?.should be_nil
+            result["id"]?.should be_nil
             result["error"].should eq(Twine::Error::DATA)
 
             app.close
@@ -81,8 +81,8 @@ module Twine
             response.status_code.should eq(201)
 
             result = JSON.parse response.body
-            result["kite_id"]?.should_not be_nil
-            kite_id = result["kite_id"]
+            result["id"]?.should_not be_nil
+            kite_id = result["id"]
 
             app.close
           end
@@ -93,12 +93,12 @@ module Twine
             response = HTTP::Client.post \
               "#{app.url}/{{ name.id }}s",
                 body: %({"version": "1.0"}),
-                headers: HTTP::Headers{"Bearer" => "so secret"}
+                headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 
             result = JSON.parse response.body
-            result["kite_id"]?.should be_nil
+            result["id"]?.should be_nil
             result["error"].should eq(Twine::Error::UNAUTHORIZED)
 
             app.close
@@ -106,7 +106,7 @@ module Twine
 
         end
 
-        describe "GET /{{ name.id }}s/:id?" do
+        describe "GET /{{ name.id }}s" do
           it "GET should return available {{ name.id }}s" do
             app.listen block: false
 
@@ -129,8 +129,8 @@ module Twine
             response.status_code.should eq(201)
 
             result = JSON.parse response.body
-            result["kite_id"]?.should_not be_nil
-            new_kite_id = result["kite_id"]
+            result["id"]?.should_not be_nil
+            new_kite_id = result["id"]
 
             # re-fetch {{ name.id }}s
             response = HTTP::Client.get \
@@ -158,11 +158,11 @@ module Twine
             response.status_code.should eq(200)
 
             result = JSON.parse response.body
-            result[kite_id.to_s]?.should_not be_nil
-            result[kite_id.to_s]["version"].should eq("1.0")
+            result["id"].should eq(kite_id.to_s)
+            result["version"].should eq("1.0")
 
             {% if name.id == "server" %}
-            result[kite_id.to_s]["connections"].should eq("0")
+            result["connections"].should eq("0")
             {% end %}
 
             app.close
@@ -185,7 +185,7 @@ module Twine
 
             response = HTTP::Client.get \
               "#{app.url}/{{ name.id }}s",
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "so secret"}
 
             response.status_code.should eq(401)
 
@@ -224,7 +224,7 @@ module Twine
 
             response = HTTP::Client.delete \
               "#{app.url}/{{ name.id }}s/#{kite_id}",
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 
@@ -263,10 +263,10 @@ module Twine
             response.status_code.should eq(200)
 
             result = JSON.parse response.body
-            result[new_kite_id.to_s]?.should_not be_nil
 
-            result[new_kite_id.to_s]["version"].should eq("2.0")
-            result[new_kite_id.to_s]["connections"].should eq("2")
+            result["id"].should eq(new_kite_id.to_s)
+            result["version"].should eq("2.0")
+            result["connections"].should eq("2")
 
             app.close
           end
@@ -277,7 +277,7 @@ module Twine
             response = HTTP::Client.patch \
               "#{app.url}/{{ name.id }}s/#{new_kite_id}",
               body: %({"version": "2.0"}),
-              headers: HTTP::Headers{"Bearer" => "so secret"}
+              headers: HTTP::Headers{"Authorization" => "Bearer so secret"}
 
             response.status_code.should eq(401)
 
@@ -319,8 +319,8 @@ module Twine
           )
           response.status_code.should eq(201)
           result = JSON.parse response.body
-          result["kite_id"]?.should_not be_nil
-          servers << result["kite_id"].to_s
+          result["id"]?.should_not be_nil
+          servers << result["id"].to_s
         end
 
         servers.size.should eq(4)
@@ -347,7 +347,7 @@ module Twine
         response.status_code.should eq(302)
 
         new_location = response.headers["Location"]
-        new_location.should eq("#{app.url}/connect/#{expected_server}")
+        new_location.should eq("//#{app.url}/connect/#{expected_server}")
 
         response = HTTP::Client.patch \
           "#{app.url}/servers/#{expected_server}",
