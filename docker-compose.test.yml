@@ -4,3 +4,5 @@ services:
     build: .
     image: ropelive/twine
     command: crystal spec -v
+    environment:
+      REDIS_URL: "redis://redis:6379"
