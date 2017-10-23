@@ -1,6 +1,6 @@
 version: '2'
 services:
-  base:
+  test:
     build: .
     image: ropelive/twine
     command: crystal spec -v
