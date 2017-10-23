@@ -20,10 +20,10 @@ jobs:
           name: Run tests
           command: |
             docker-compose up -d
-            # docker-compose -f ./docker-compose.test.yml up --exit-code-from test
+            docker-compose -f ./docker-compose.test.yml up --exit-code-from test
       - deploy:
           name: Push application Docker image
           command: |
-            # [[ "${CIRCLE_BRANCH}" != "master" ]] && exit 0
+            [[ "${CIRCLE_BRANCH}" != "master" ]] && exit 0
             docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
             docker push ropelive/twine
