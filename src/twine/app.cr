@@ -12,8 +12,6 @@ module Twine
   end
 
   class App < Yeager::App
-    PORT = 4000
-    HOST = "0.0.0.0"
 
     SERVER_MAX = 100
 
@@ -52,9 +50,11 @@ module Twine
     private getter server : HTTP::Server
 
     private property secret : String
+    private property host : String
+    private property port : Int32
 
-    def initialize(@host = HOST,
-                   @port = PORT,
+    def initialize(@host,
+                   @port,
                    @prefix = KEY_PREFIX,
                    @verbose = false,
                    @secret = SecureRandom.uuid)

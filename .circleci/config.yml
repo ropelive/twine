@@ -1,0 +1,29 @@
+version: 2
+jobs:
+  build:
+    working_directory: /app
+    docker:
+      - image: docker:17.05.0-ce-git
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run:
+          name: Install dependencies
+          command: |
+            apk add --no-cache py-pip=9.0.0-r1
+            pip install docker-compose==1.16.1
+      - run:
+          name: Build application Docker images
+          command: |
+            docker-compose build
+      - run:
+          name: Run tests
+          command: |
+            docker-compose up -d
+            docker-compose -f ./docker-compose.test.yml up --exit-code-from test
+      - deploy:
+          name: Push application Docker image
+          command: |
+            [[ "${CIRCLE_BRANCH}" != "master" ]] && exit 0
+            docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
+            docker push ropelive/twine

@@ -4,7 +4,13 @@ module Twine
   PREFIX = "twine-test-"
   SECRET = SecureRandom.uuid
 
-  app = Twine::App.new prefix: PREFIX, secret: SECRET
+  ENV["PORT"] ||= "4000"
+  ENV["HOST"] ||= "0.0.0.0"
+
+  port = ENV["PORT"].to_i
+  host = ENV["HOST"].to_s
+
+  app = Twine::App.new host: host, port: port, prefix: PREFIX, secret: SECRET
   headers = HTTP::Headers{"Authorization" => "Bearer #{SECRET}"}
 
   describe App do
