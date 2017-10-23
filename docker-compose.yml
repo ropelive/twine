@@ -9,6 +9,8 @@ services:
     command: /app/twine-server
     links:
     - redis
+    environment:
+      REDIS_URL: "redis://redis:6379"
 
   redis:
     image: redis
