@@ -13,4 +13,10 @@ end
 
 verbose = !(ENV["TWINE_VERBOSE"]?.nil?)
 
-(Twine::App.new(secret: secret, verbose: verbose)).listen
+ENV["PORT"] ||= "4000"
+ENV["HOST"] ||= "0.0.0.0"
+
+port = ENV["PORT"].to_i
+host = ENV["HOST"].to_s
+
+(Twine::App.new(host: host, port: port, secret: secret, verbose: verbose)).listen
