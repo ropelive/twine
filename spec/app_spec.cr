@@ -300,7 +300,7 @@ module Twine
     describe "GET /connect" do
       app.delete_all
 
-      it "should error when there is no server available " do
+      it "should return error when there is no server available " do
         app.listen block: false
 
         response = HTTP::Client.get(
@@ -311,7 +311,7 @@ module Twine
         app.close
       end
 
-      it "should redirect requests to first available server" do
+      it "should return first available server address" do
         app.listen block: false
 
         # Create four servers
@@ -350,9 +350,9 @@ module Twine
           headers: headers
         )
 
-        response.status_code.should eq(302)
+        response.status_code.should eq(200)
 
-        new_location = response.headers["Location"]
+        new_location = response.body
         new_location.should eq("//#{app.url}/connect/#{expected_server}")
 
         response = HTTP::Client.patch \
@@ -368,9 +368,9 @@ module Twine
           "#{app.url}/connect",
         )
 
-        response.status_code.should eq(302)
+        response.status_code.should eq(200)
 
-        new_location = response.headers["Location"]
+        new_location = response.body
         new_location.should eq("https://google.com")
 
         app.close

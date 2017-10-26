@@ -82,9 +82,9 @@ module Twine
         data = data.as(Hash)
 
         if url = data["url"]?
-          res.redirect url.to_s
+          res.send url.to_s
         else
-          res.redirect "//#{@url}/connect/#{server_id}"
+          res.send "//#{@url}/connect/#{server_id}"
         end
       end
 
