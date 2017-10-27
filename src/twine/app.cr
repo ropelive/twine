@@ -265,7 +265,7 @@ module Twine
       err = delete_multi [key_for.server(id)]
       return err unless err.nil?
 
-      sort_servers id
+      delete_from_list key_for.custom("servers"), id
     end
 
     def create_server(data = nil)
@@ -402,6 +402,15 @@ module Twine
     def sort_list(list, by, id = nil)
       redis.rpush(list, id) unless id.nil?
       redis.sort(list, by: by, store: list)
+      return nil
+    rescue Redis::Error
+      return Error::DATABASE
+    rescue
+      return Error::INTERNAL
+    end
+
+    def delete_from_list(list, id)
+      redis.lrem(list, 0, id)
       return nil
     rescue Redis::Error
       return Error::DATABASE
