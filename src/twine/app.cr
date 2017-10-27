@@ -12,9 +12,6 @@ module Twine
   end
 
   class App < Yeager::App
-
-    SERVER_MAX = 100
-
     WELCOME       = "Welcome to Twine!"
     SERVER_PREFIX = "rope-server-"
     NODE_PREFIX   = "rope-node-"
@@ -211,16 +208,19 @@ module Twine
     end
 
     private def enable_cors
+      allow = "Access-Control-Allow"
+
       use do |req, res, continue|
-        res.headers.add "Access-Control-Allow-Origin", "*"
+        res.headers.add "#{allow}-Origin", "*"
         continue.call
       end
 
+      methods = "GET, POST, DELETE, PATCH, OPTIONS"
+      headers = "Authorization, Origin, X-Requested-With, Content-Type, Accept"
+
       options "*" do |req, res|
-        res.headers.add "Access-Control-Allow-Methods", \
-          "GET, POST, DELETE, PATCH, OPTIONS"
-        res.headers.add "Access-Control-Allow-Headers", \
-          "Authorization, Origin, X-Requested-With, Content-Type, Accept"
+        res.headers.add "#{allow}-Methods", methods
+        res.headers.add "#{allow}-Headers", headers
         res.flush
       end
     end
