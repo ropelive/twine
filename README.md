@@ -1,10 +1,12 @@
+![](https://raw.githubusercontent.com/ropelive/press/master/banners/rope-twine-cr.png)
+
 # Twine
 
 Twine is the registry and router for multiple Rope servers.
 It's basically a web server with routing capabilities and a registry
 endpoint for kites connected to Rope servers via Redis.
 
-[![CircleCI](https://circleci.com/gh/koding/twine.svg?style=svg&circle-token=2d0e55e391bd9dc5271711e18cc43e26c24638c4)](https://circleci.com/gh/koding/twine)
+[![CircleCI](https://circleci.com/gh/ropelive/twine.svg?style=svg)](https://circleci.com/gh/ropelive/twine)
 
 ## Installation
 
@@ -22,7 +24,7 @@ endpoint for kites connected to Rope servers via Redis.
 
 ## Contributing
 
-1. Fork it ( https://github.com/koding/twine/fork )
+1. Fork it ( https://github.com/ropelive/twine/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
@@ -31,3 +33,7 @@ endpoint for kites connected to Rope servers via Redis.
 ## Contributors
 
 - [gokmen](https://github.com/gokmen) Gokmen Goksel - creator, maintainer
+
+## License
+
+MIT (c) 2017 Rope
