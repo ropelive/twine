@@ -24,6 +24,14 @@ jobs:
       - deploy:
           name: Push application Docker image
           command: |
-            [[ "${CIRCLE_BRANCH}" != "master" ]] && exit 0
+            [[ -z $CIRCLE_TAG ]] && exit 0
             docker login --username "${DOCKER_USERNAME}" --password "${DOCKER_PASSWORD}"
-            docker push ropelive/twine
+            docker tag ropelive/twine ropelive/twine:$CIRCLE_TAG
+            docker push ropelive/twine:$CIRCLE_TAG
+
+# this step is required for CircleCI to understand that a tag is pushed - otherwise they don't start a build 
+deployment:
+  fake_deploy_for_cci2:
+    tag: /.*/
+    commands:
+      - echo "make tags run in 2.0"
