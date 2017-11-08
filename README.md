@@ -6,7 +6,7 @@ Twine is the registry and router for multiple Rope servers.
 It's basically a web server with routing capabilities and a registry
 endpoint for kites connected to Rope servers via Redis.
 
-[![CircleCI](https://circleci.com/gh/ropelive/twine.svg?style=svg)](https://circleci.com/gh/ropelive/twine)
+[![CircleCI](https://circleci.com/gh/ropelive/twine/tree/master.svg?style=svg)](https://circleci.com/gh/ropelive/twine/tree/master)
 
 ## Installation
 
